@@ -21,11 +21,15 @@ The code is intended to reproduce the main numerical trends reported in Section 
 ```text
 .
 ├── split_conformal/
-│   ├── ...
-│   └── ...
+│   ├── main.py                          # Main entry (4 settings × 6 algorithms)
+│   ├── algorithm.py                     # ACI + DriftOCP algorithm classes
+│   ├── data_generating.py               # Data generators for Settings 1–4
+│   ├── drift_detection_conformal.py     # Drift detection conformal procedure
+│   └── plot.py                          # Plotting utilities
 ├── full_conformal/
-│   ├── ...
-│   └── ...
+│   ├── online_vs_pretrain_both_drifts.py    # Well-specified model experiment
+│   ├── misspecified_both_drifts.py          # Misspecified model experiment
+│   └── regenerate_combined_2x4_plots.py    # Regenerate combined 2×4 figures
 └── README.md
 ```
 
@@ -82,45 +86,66 @@ So, for the second module, the code should be read as implementing a **round-bas
 
 ## Installation
 
-We recommend Python 3.10+.
-
-Install the main dependencies with:
+We recommend Python 3.10+ and using a conda environment.
 
 ```bash
-pip install numpy scipy scikit-learn matplotlib pandas
+conda create -n spci python=3.11
+conda activate spci
+pip install numpy scipy scikit-learn matplotlib pandas seaborn tqdm
 ```
 
-Depending on the scripts, you may also need:
-
-```bash
-pip install seaborn tqdm
-```
+> **Note on version compatibility:** matplotlib ≥ 3.9 is required if using NumPy ≥ 2.0. Earlier versions of matplotlib (e.g. 3.7) are compiled against NumPy 1.x and will fail to import under NumPy 2.
 
 ## How to run
 
-Please enter the relevant subdirectory and run the main experiment script there.
-
-A typical workflow is:
+### 1. Pretrained-score experiments (`split_conformal/`)
 
 ```bash
 cd split_conformal
 python main.py
 ```
 
-or
+This runs all 4 settings × 6 algorithms in parallel and produces:
+
+- `experiment_results_all_settings.pkl` — full raw experiment data
+- `experiment_summary.json` — summary statistics
+- `comparison_Setting{1,2,3,4}_*.png` — per-setting comparison plots
+- `split_conformal_combined_2x4.pdf` — combined 2×4 figure
+
+### 2. Online parametric-score experiments (`full_conformal/`)
+
+There is no single `main.py`; run the two experiment scripts separately:
 
 ```bash
 cd full_conformal
-python main.py
+
+# Step 1: Well-specified model (Y = Xβ* + ε)
+python online_vs_pretrain_both_drifts.py
+
+# Step 2: Misspecified model (Y = Xβ* + (1/C)||X||² + ε)
+python misspecified_both_drifts.py
 ```
+
+Each script runs 20 repetitions comparing three methods (Adaptive / Pre-trained / Model-free) under both mean drift and variance drift. Outputs:
+
+- `results/well_specified_combined.pdf` + `results/well_specified_data.pkl`
+- `results/misspec_combined.pdf` + `results/misspec_data.pkl`
+
+After both experiments finish, you can regenerate the combined 2×4 figure:
+
+```bash
+python regenerate_combined_2x4_plots.py
+```
+
+This reads the `.pkl` files from both modules and produces `results/full_conformal_combined_2x4.pdf`.
 
 ## Outputs
 
-The scripts are designed to generate the quantities reported in the paper, such as:
+The scripts generate the quantities reported in Section 5 of the paper:
 
 - cumulative regret trajectories
 - quantile evolution
 - prediction interval widths
 - rolling / local coverage curves
 
-Plots are typically either displayed directly or saved to disk, depending on the script configuration.
+All plots are saved to disk as PDF or PNG files in the respective output directories.
